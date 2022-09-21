@@ -1,27 +1,40 @@
+// ignore_for_file: avoid_print
 import 'dart:typed_data';
 
 import 'package:bs58/bs58.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:kinetic/commitment.dart';
-import 'package:kinetic/constants.dart';
 import 'package:kinetic/generated/lib/api.dart';
 import 'package:kinetic/interfaces/create_account_options.dart';
 import 'package:kinetic/interfaces/get_balance_options.dart';
 import 'package:kinetic/interfaces/get_history_options.dart';
 import 'package:kinetic/interfaces/get_token_accounts_options.dart';
 import 'package:kinetic/interfaces/kinetic_sdk_config.dart';
-import 'package:kinetic/interfaces/kinetic_sdk_environment.dart';
 import 'package:kinetic/interfaces/make_transfer_options.dart';
+import 'package:kinetic/interfaces/request_airdrop_options.dart';
 import 'package:kinetic/interfaces/transaction_type.dart';
 import 'package:kinetic/keypair.dart';
 import 'package:kinetic/kinetic_sdk.dart';
 import 'package:kinetic/solana.dart';
 import 'package:kinetic_demo_app/tools.dart';
+import 'package:logger/logger.dart';
+
+import 'fixtures.dart';
 
 void main() {
   runApp(const MyApp());
 }
+
+const accountAlice = 'ALisrzsaVqciCxy8r6g7MUrPoRo3CpGxPhwBbZzqZ9bA';
+const accountBob = 'BobQoPqWy5cpFioy1dMTYqNH9WpC39mkAEDJWXECoJ9y';
+const mint = 'KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX';
+
+KineticSdkConfig config = KineticSdkConfig(
+  endpoint: 'https://sandbox.kinetic.host',
+  environment: 'devnet',
+  index: 1,
+  logger: Logger(),
+);
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -47,38 +60,45 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-
-  late KineticSdk kinetic;
+  late KineticSdk sdk;
   bool loading = false;
 
   @override
   void initState() {
     super.initState();
-    kinetic = KineticSdk();
-    KineticSdkConfig config = KineticSdkConfig(index: 1, environment: KineticSdkEnvironment.devnet);
-    kinetic.setup(sdkConfig: config);
+  }
+
+  Future<void> setupSdk() async {
+    sdk = await KineticSdk.setup(config);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            const Text("Kinetic Demo"),
-            const Spacer(),
-            loading == false ? Container() : const SpinKitRing(
-              color: Colors.white,
-              size: 25.0,
-              lineWidth: 3,
+    return FutureBuilder(
+      future: setupSdk(),
+      builder: (BuildContext context, AsyncSnapshot snapshot) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Row(
+              children: [
+                const Text("Kinetic Demo"),
+                const Spacer(),
+                loading == false
+                    ? Container()
+                    : const SpinKitRing(
+                        color: Colors.white,
+                        size: 25.0,
+                        lineWidth: 3,
+                      ),
+                const SizedBox(
+                  width: 25,
+                ),
+              ],
             ),
-            const SizedBox(
-              width: 25,
-            ),
-          ],
-        ),
-      ),
-      body: demoBody(),
+          ),
+          body: demoBody(),
+        );
+      },
     );
   }
 
@@ -96,11 +116,9 @@ class _MyHomePageState extends State<MyHomePage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-
                 const SizedBox(
                   height: 50,
                 ),
-
                 const Text(
                   "Keypair",
                   style: TextStyle(
@@ -109,23 +127,22 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
-                        Keypair().random().then((value) {
-                          if (mounted) showAlertDialog(context, "Public Key", value.publicKey.toBase58());
+                        Keypair.random().then((value) {
+                          if (mounted) showAlertDialog(context, "Public Key", value.publicKey.toString());
 
                           setState(() {
                             loading = false;
                           });
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -144,33 +161,24 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
 
-                        List<int> alice = [
-                          205, 213, 7, 246, 167, 206, 37, 209, 161, 129, 168, 160, 90, 103, 198, 142, 83, 177, 214, 203, 80, 29, 71, 245, 56,
-                          152, 15, 8, 235, 174, 62, 79, 138, 198, 145, 111, 119, 33, 15, 237, 89, 201, 122, 89, 48, 221, 224, 71, 81, 128, 45,
-                          97, 191, 105, 37, 228, 243, 238, 130, 151, 53, 221, 172, 125,
-                        ];
+                        final prv8 = Uint8List.fromList(aliceByteArray.sublist(0, 32));
+                        final kp = await Keypair.fromByteArray(prv8);
 
-                        final pub8 = Uint8List.fromList(alice.sublist(32,64));
-                        final prv8 = Uint8List.fromList(alice.sublist(0,32));
-                        final kp = await Keypair().fromByteArray(prv8);
-
-                        if (mounted) showAlertDialog(context, "Public Key", kp.publicKey.toBase58());
+                        if (mounted) showAlertDialog(context, "Public Key", kp.publicKey.toString());
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -183,31 +191,28 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.deepPurpleAccent,
                     child: const Text(
                       "From Byte Array",
-                      style: TextStyle(
-                        color: Colors.white,
-                      ),
+                      style: TextStyle(color: Colors.white),
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
-                        Keypair _keypair = Keypair();
-                        String mnemonic = _keypair.generateMnemonic();
-                        final user = await _keypair.fromMnemonic(mnemonic);
-                        String userPublicKey = _keypair.solanaPublicKey.toBase58();
+
+                        String mnemonic = Keypair.generateMnemonic();
+                        Keypair kp = await Keypair.fromMnemonic(mnemonic);
+                        String userPublicKey = kp.solanaPublicKey.toString();
                         if (mounted) showAlertDialog(context, "Public Key", userPublicKey);
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -220,33 +225,26 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.deepPurpleAccent,
                     child: const Text(
                       "From Mnemonic",
-                      style: TextStyle(
-                        color: Colors.white,
-                      ),
+                      style: TextStyle(color: Colors.white),
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
-                        final List<int> seed = [73, 154, 131, 152, 101, 241, 135, 12, 176, 253, 69, 248, 79, 119, 236,
-                          141, 15, 53, 10, 100, 172, 234, 47, 6, 104, 234, 201, 38, 237, 93, 158, 39, 30,
-                          182, 225, 86, 186, 169, 152, 229, 143, 253, 186, 146, 191, 93, 39, 209, 166, 124,
-                          156, 137, 160, 128, 43, 220, 60, 14, 25, 165, 37, 150, 79, 171];
 
-                        final kp = await Keypair().derive(seed, "m/44'/501'/0'/0'");
-                        if (mounted) showAlertDialog(context, "Public Key", kp.publicKey.toBase58());
+                        final kp = await Keypair.derive(seed, "m/44'/501'/0'/0'");
+                        if (mounted) showAlertDialog(context, "Public Key", kp.publicKey.toString());
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -265,27 +263,22 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
-                        final List<int> seed = [73, 154, 131, 152, 101, 241, 135, 12, 176, 253, 69, 248, 79, 119, 236,
-                          141, 15, 53, 10, 100, 172, 234, 47, 6, 104, 234, 201, 38, 237, 93, 158, 39, 30,
-                          182, 225, 86, 186, 169, 152, 229, 143, 253, 186, 146, 191, 93, 39, 209, 166, 124,
-                          156, 137, 160, 128, 43, 220, 60, 14, 25, 165, 37, 150, 79, 171];
 
-                        final kp = await Keypair().fromSeed(seed);
-                        if (mounted) showAlertDialog(context, "Public Key", kp.publicKey.toBase58());
+                        final kp = await Keypair.fromSeed(seed);
+                        if (mounted) showAlertDialog(context, "Public Key", kp.publicKey.toString());
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -304,32 +297,24 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
 
-                        List<int> alice = [
-                          205, 213, 7, 246, 167, 206, 37, 209, 161, 129, 168, 160, 90, 103, 198, 142, 83, 177, 214, 203, 80, 29, 71, 245, 56,
-                          152, 15, 8, 235, 174, 62, 79, 138, 198, 145, 111, 119, 33, 15, 237, 89, 201, 122, 89, 48, 221, 224, 71, 81, 128, 45,
-                          97, 191, 105, 37, 228, 243, 238, 130, 151, 53, 221, 172, 125,
-                        ];
+                        final prv8 = Uint8List.fromList(aliceByteArray.sublist(0, 32));
 
-                        final pub8 = Uint8List.fromList(alice.sublist(32,64));
-                        final prv8 = Uint8List.fromList(alice.sublist(0,32));
-
-                        final kp = await Keypair().fromSecretKey(base58.encode(prv8));
-                        if (mounted) showAlertDialog(context, base58.encode(prv8), kp.publicKey.toBase58());
+                        final kp = await Keypair.fromSecretKey(base58.encode(prv8));
+                        if (mounted) showAlertDialog(context, base58.encode(prv8), kp.publicKey.toString());
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -348,22 +333,21 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
-                        final m = Keypair().generateMnemonic();
-                        if (mounted) showAlertDialog(context, "Mnemonic", m);
+                        final mnemonic = Keypair.generateMnemonic();
+                        if (mounted) showAlertDialog(context, "Mnemonic", mnemonic);
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -382,23 +366,21 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
-                        Keypair keypair = Keypair();
-                        var r = await keypair.random();
-                        if (mounted) showAlertDialog(context, "solanaPublicKey", keypair.solanaPublicKey.toBase58());
+                        Keypair keypair = await Keypair.random();
+                        if (mounted) showAlertDialog(context, "solanaPublicKey", keypair.solanaPublicKey.toString());
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -417,23 +399,23 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
-                        Keypair keypair = Keypair();
-                        var r = await keypair.random();
-                        if (mounted) showAlertDialog(context, "solanaSecretKey", (await keypair.solanaSecretKey).toString());
+                        Keypair keypair = await Keypair.random();
+                        if (mounted) {
+                          showAlertDialog(context, "solanaSecretKey", (await keypair.solanaSecretKey).toString());
+                        }
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -452,23 +434,23 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
-                        Keypair keypair = Keypair();
-                        var r = await keypair.random();
-                        if (mounted) showAlertDialog(context, "solanaRawSecret", (await keypair.solanaRawSecret).toString());
+                        Keypair keypair = await Keypair.random();
+                        if (mounted) {
+                          showAlertDialog(context, "solanaRawSecret", (await keypair.solanaSecretKey).toString());
+                        }
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -487,11 +469,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 const SizedBox(
                   height: 20,
                 ),
-
                 const Text(
                   "SDK",
                   style: TextStyle(
@@ -500,26 +480,28 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
-                        final from = await Keypair().random();
+                        final from = await Keypair.random();
 
-                        CreateAccountOptions accountOptions = CreateAccountOptions(owner: from, mint: "KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX", commitment: Commitment.Finalized);
-
-                        dynamic res = await kinetic.createAccount(createAccountOptions: accountOptions);
+                        Transaction? res = await sdk.createAccount(
+                            options: CreateAccountOptions(
+                          owner: from,
+                          mint: "KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX",
+                          commitment: CreateAccountRequestCommitmentEnum.finalized,
+                        ));
                         if (mounted) showAlertDialog(context, "Create Account", res.toString());
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -538,26 +520,30 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
 
-                        Keypair k = Keypair();
-                        var kp = await k.random();
-                        RequestAirdropRequest airdropRequest = RequestAirdropRequest(account: kp.publicKey.toBase58(), commitment: RequestAirdropRequestCommitmentEnum.finalized, environment: kinetic.sdkConfig.environment.name, index: kinetic.sdkConfig.index, mint: "KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX");
-                        dynamic res = await kinetic.requestAirdrop(airdropRequest: airdropRequest);
+                        var kp = await Keypair.random();
+                        RequestAirdropResponse? res = await sdk.requestAirdrop(
+                          options: RequestAirdropOptions(
+                            account: kp.publicKey.toString(),
+                            commitment: RequestAirdropRequestCommitmentEnum.finalized,
+                            mint: "KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX",
+                            amount: '50000',
+                          ),
+                        );
                         if (mounted) showAlertDialog(context, "Request Airdrop", res.toString());
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -576,24 +562,22 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
-
-                        GetBalanceOptions balanceOptions = GetBalanceOptions(account: Keypair().publicKeyFromString("DUXaDD5FZDa9yFf83tP8Abb6z66ECiawRShejSXRMN5F"));
-                        dynamic res = await kinetic.getBalance(balanceOptions: balanceOptions);
+                        BalanceResponse? res = await sdk.getBalance(
+                            options: GetBalanceOptions(account: "DUXaDD5FZDa9yFf83tP8Abb6z66ECiawRShejSXRMN5F"));
                         if (mounted) showAlertDialog(context, "Get Balance", res.toString());
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -612,24 +596,21 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
-                        Keypair keypair = Keypair();
-                        var r = await keypair.random();
-                        dynamic res = await kinetic.getExplorerUrl(path: "address/${Keypair().publicKeyFromString("DUXaDD5FZDa9yFf83tP8Abb6z66ECiawRShejSXRMN5F")}");
+                        String? res = await sdk.getExplorerUrl("address/$accountBob");
                         if (mounted) showAlertDialog(context, "Get Explorer Url", res.toString());
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -648,24 +629,26 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
 
-                        GetHistoryOptions historyOptions = GetHistoryOptions(account: Keypair().publicKeyFromString("DUXaDD5FZDa9yFf83tP8Abb6z66ECiawRShejSXRMN5F"), mint: Keypair().publicKeyFromString("KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX"));
-                        dynamic res = await kinetic.getHistory(historyOptions: historyOptions);
+                        dynamic res = await sdk.getHistory(
+                            options: GetHistoryOptions(
+                          account: accountBob,
+                          mint: mint,
+                        ));
                         if (mounted) showAlertDialog(context, "Get History", res.toString());
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -684,17 +667,19 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
 
-                        GetTokenAccountsOptions accountOptions = GetTokenAccountsOptions(account: Keypair().publicKeyFromString("DUXaDD5FZDa9yFf83tP8Abb6z66ECiawRShejSXRMN5F"), mint: Keypair().publicKeyFromString("KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX"));
-                        dynamic res = await kinetic.getTokenAccounts(tokenAccountsOptions: accountOptions);
+                        List<String>? res = await sdk.getTokenAccounts(
+                            options: GetTokenAccountsOptions(
+                          account: accountBob,
+                          mint: mint,
+                        ));
 
                         if (mounted) showAlertDialog(context, "Get Token Account(s)", res.toString());
 
@@ -702,7 +687,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -721,28 +706,28 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
 
-                        List<int> alice = [
-                          205, 213, 7, 246, 167, 206, 37, 209, 161, 129, 168, 160, 90, 103, 198, 142, 83, 177, 214, 203, 80, 29, 71, 245, 56,
-                          152, 15, 8, 235, 174, 62, 79, 138, 198, 145, 111, 119, 33, 15, 237, 89, 201, 122, 89, 48, 221, 224, 71, 81, 128, 45,
-                          97, 191, 105, 37, 228, 243, 238, 130, 151, 53, 221, 172, 125,
-                        ];
+                        final prv8 = Uint8List.fromList(aliceByteArray.sublist(0, 32));
 
-                        final pub8 = Uint8List.fromList(alice.sublist(32,64));
-                        final prv8 = Uint8List.fromList(alice.sublist(0,32));
+                        final kp = await Keypair.fromSecretKey(base58.encode(prv8));
 
-                        final kp = await Keypair().fromSecretKey(base58.encode(prv8));
-
-                        MakeTransferOptions makeTransferOptions = MakeTransferOptions(amount: "1.0", destination: Keypair().publicKeyFromString("AVGAggsdHmubCZLmJ94dRp98kGJu1ZsFENPTNSe3Nhfw"), commitment: MakeTransferRequestCommitmentEnum.finalized, mint: "KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX", owner: kp, referenceId: "p2p", referenceType: "tx", type: TransactionType.p2p);
-                        dynamic res = await kinetic.makeTransfer(makeTransferOptions: makeTransferOptions, senderCreate: true);
+                        MakeTransferOptions makeTransferOptions = MakeTransferOptions(
+                            amount: "1.0",
+                            destination: "AVGAggsdHmubCZLmJ94dRp98kGJu1ZsFENPTNSe3Nhfw",
+                            commitment: MakeTransferRequestCommitmentEnum.finalized,
+                            mint: mint,
+                            owner: kp,
+                            referenceId: "p2p",
+                            referenceType: "tx",
+                            type: TransactionType.p2p);
+                        dynamic res = await sdk.makeTransfer(options: makeTransferOptions);
 
                         if (mounted) showAlertDialog(context, "Make Transfer", res.toString());
 
@@ -750,7 +735,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -769,11 +754,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 const SizedBox(
                   height: 20,
                 ),
-
                 const Text(
                   "Solana",
                   style: TextStyle(
@@ -782,25 +765,24 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-
                 TextButton(
                   onPressed: () async {
                     try {
-                      if (kinetic.initialized && loading == false) {
+                      if (loading == false) {
                         setState(() {
                           loading = true;
                         });
 
-                        Solana client = Solana(solanaRpcEndpoint: kinetic.sdkConfig.solanaRpcEndpoint, solanaWssEndpoint: kinetic.sdkConfig.solanaWssEndpoint, timeoutDuration: timeoutDuration);
+                        Solana? client = sdk.solana;
+                        String? res = client.client.rpcClient.toString();
 
-                        dynamic res = client.client.rpcClient.toString();
                         if (mounted) showAlertDialog(context, "Solana RPC Client Instance", res.toString());
 
                         setState(() {
                           loading = false;
                         });
                       }
-                    }catch(e) {
+                    } catch (e) {
                       print(e);
                       setState(() {
                         loading = false;
@@ -819,11 +801,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-
                 const SizedBox(
                   height: 50,
                 ),
-
               ],
             ),
           ),
