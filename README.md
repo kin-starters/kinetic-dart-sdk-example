@@ -1,6 +1,15 @@
 # kinetic_demo_app
 
-Demo for Kinetic Dart Module
+Demo for the [Kinetic Dart SDK](https://github.com/kin-labs/kinetic-dart).
+
+## Usage
+
+In order to use this SDK, please head over to the [Kinetic Dart SDK](https://kinetic.kin.org/docs/sdk/dart) documentation.
+
+## Version
+
+This SDK is built to work with `@kinetic/api@v1.0.0-rc.1`. Using it with other versions may lead to issues.
+
 
 ## Getting Started
 
