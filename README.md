@@ -1,6 +1,10 @@
-# kinetic_demo_app
+# Kinetic Dart SDK Starter App
 
-Demo for the [Kinetic Dart SDK](https://github.com/kin-labs/kinetic-dart).
+This is a starter app for the [Kinetic Dart SDK](https://github.com/kin-labs/kinetic-dart). 
+
+It is a simple app that allows you to create keypairs, create an account, transfer Kin, and view your balance and account history.
+
+It uses the [Dart library for Solana](https://pub.dev/packages/solana) built by the [Crypto Please](https://cryptoplease.com/) team.
 
 ## Usage
 
