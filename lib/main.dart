@@ -434,41 +434,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-                TextButton(
-                  onPressed: () async {
-                    try {
-                      if (loading == false) {
-                        setState(() {
-                          loading = true;
-                        });
-                        Keypair keypair = await Keypair.random();
-                        if (mounted) {
-                          showAlertDialog(context, "solanaRawSecret", (await keypair.solanaSecretKey).toString());
-                        }
-
-                        setState(() {
-                          loading = false;
-                        });
-                      }
-                    } catch (e) {
-                      print(e);
-                      setState(() {
-                        loading = false;
-                      });
-                      if (mounted) showAlertDialog(context, "Error", e.toString());
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    color: Colors.deepPurpleAccent,
-                    child: const Text(
-                      "get solanaRawSecret",
-                      style: TextStyle(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
                 const SizedBox(
                   height: 20,
                 ),
