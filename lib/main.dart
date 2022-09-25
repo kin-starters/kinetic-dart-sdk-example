@@ -454,8 +454,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         });
                         final from = await Keypair.random();
 
-                        Transaction? res = await sdk.createAccount(
-                            options: CreateAccountOptions(
+                        Transaction? res = await sdk.createAccount(CreateAccountOptions(
                           owner: from,
                           mint: "KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX",
                           commitment: CreateAccountRequestCommitmentEnum.finalized,
@@ -495,7 +494,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                         var kp = await Keypair.random();
                         RequestAirdropResponse? res = await sdk.requestAirdrop(
-                          options: RequestAirdropOptions(
+                          RequestAirdropOptions(
                             account: kp.publicKey.toString(),
                             commitment: RequestAirdropRequestCommitmentEnum.finalized,
                             mint: "KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX",
@@ -534,8 +533,8 @@ class _MyHomePageState extends State<MyHomePage> {
                         setState(() {
                           loading = true;
                         });
-                        BalanceResponse? res = await sdk.getBalance(
-                            options: GetBalanceOptions(account: "DUXaDD5FZDa9yFf83tP8Abb6z66ECiawRShejSXRMN5F"));
+                        BalanceResponse? res = await sdk
+                            .getBalance(GetBalanceOptions(account: "DUXaDD5FZDa9yFf83tP8Abb6z66ECiawRShejSXRMN5F"));
                         if (mounted) showAlertDialog(context, "Get Balance", res.toString());
 
                         setState(() {
@@ -602,8 +601,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           loading = true;
                         });
 
-                        dynamic res = await sdk.getHistory(
-                            options: GetHistoryOptions(
+                        dynamic res = await sdk.getHistory(GetHistoryOptions(
                           account: accountBob,
                           mint: mint,
                         ));
@@ -640,8 +638,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           loading = true;
                         });
 
-                        List<String>? res = await sdk.getTokenAccounts(
-                            options: GetTokenAccountsOptions(
+                        List<String>? res = await sdk.getTokenAccounts(GetTokenAccountsOptions(
                           account: accountBob,
                           mint: mint,
                         ));
@@ -683,7 +680,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                         final kp = await Keypair.fromSecretKey(base58.encode(prv8));
 
-                        MakeTransferOptions makeTransferOptions = MakeTransferOptions(
+                        MakeTransferOptions options = MakeTransferOptions(
                             amount: "1.0",
                             destination: "AVGAggsdHmubCZLmJ94dRp98kGJu1ZsFENPTNSe3Nhfw",
                             commitment: MakeTransferRequestCommitmentEnum.finalized,
@@ -692,7 +689,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             referenceId: "p2p",
                             referenceType: "tx",
                             type: TransactionType.p2p);
-                        dynamic res = await sdk.makeTransfer(options: makeTransferOptions);
+                        dynamic res = await sdk.makeTransfer(options);
 
                         if (mounted) showAlertDialog(context, "Make Transfer", res.toString());
 
