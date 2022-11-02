@@ -199,7 +199,7 @@ packages:
       name: kinetic
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.0.0-rc.1+1"
+    version: "1.0.0-rc.6"
   lints:
     dependency: transitive
     description:

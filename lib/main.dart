@@ -457,7 +457,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         Transaction? res = await sdk.createAccount(CreateAccountOptions(
                           owner: from,
                           mint: "KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX",
-                          commitment: CreateAccountRequestCommitmentEnum.finalized,
+                          commitment: Commitment.finalized,
                         ));
                         if (mounted) showAlertDialog(context, "Create Account", res.toString());
 
@@ -496,7 +496,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         RequestAirdropResponse? res = await sdk.requestAirdrop(
                           RequestAirdropOptions(
                             account: kp.publicKey.toString(),
-                            commitment: RequestAirdropRequestCommitmentEnum.finalized,
+                            commitment: Commitment.finalized,
                             mint: "KinDesK3dYWo3R2wDk6Ucaf31tvQCCSYyL8Fuqp33GX",
                             amount: '50000',
                           ),
@@ -683,7 +683,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         MakeTransferOptions options = MakeTransferOptions(
                             amount: "1.0",
                             destination: "AVGAggsdHmubCZLmJ94dRp98kGJu1ZsFENPTNSe3Nhfw",
-                            commitment: MakeTransferRequestCommitmentEnum.finalized,
+                            commitment: Commitment.finalized,
                             mint: mint,
                             owner: kp,
                             referenceId: "p2p",
